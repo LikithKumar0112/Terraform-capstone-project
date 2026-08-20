@@ -30,7 +30,7 @@
       when { expression { params.ACTION == 'apply' } }
       steps {
         dir('project-4.3-jenkins/terraform') {
-          sh 'terraform plan -input=false -out=tfp
+          sh 'terraform plan -input=false -out=tfp'
         }
       }
     }
@@ -54,7 +54,7 @@
       when { expression { params.ACTION == 'destroy' } }
       steps {
         dir('project-4.3-jenkins/terraform') {
-          sh 'terraform destroy -input=false -auto
+          sh 'terraform destroy -input=false -auto'
         }
       }
     }
@@ -62,6 +62,6 @@
 
   post {
     success { echo "Terraform '${params.ACTION}' completed successfully." }
-    failure { echo 'Pipeline failed — check the lo
+    failure { echo 'Pipeline failed — check the logs above.'}
   }
 }
