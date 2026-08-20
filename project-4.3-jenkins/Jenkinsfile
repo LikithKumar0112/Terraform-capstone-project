@@ -1,27 +1,24 @@
-// Project 4.3 — Jenkins pipeline that provisions infrastructure with Terraform.
-// Stages: checkout -> init -> plan -> manual approval -> apply (Task 4).
-pipeline {
   agent any
 
+  parameters {
+    choice(name: 'ACTION', choices: ['apply', 'destroy'],
+           description: 'apply = create infrastructure, destroy = tear it down')
+  }
+
   environment {
-    // GCP auth: a Jenkins "Secret file" credential holding the service-account
-    // JSON key. Bound to a file path Terraform's google provider reads.
     GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-sa-key')
-    // Passed to Terraform as var.project_id (edit to your project).
     TF_VAR_project_id = 'capstone-project-505907'
     TF_IN_AUTOMATION  = 'true'
   }
 
-  options {
-    timestamps()
-  }
+  options { timestamps() }
 
   stages {
-    stage('Checkout') {                       // Task 4: source code checkout
+    stage('Checkout') {
       steps { checkout scm }
     }
 
-    stage('Terraform Init') {                 // Task 4: terraform initialisation
+    stage('Terraform Init') {
       steps {
         dir('project-4.3-jenkins/terraform') {
           sh 'terraform init -input=false'
@@ -29,31 +26,42 @@ pipeline {
       }
     }
 
-    stage('Terraform Plan') {                 // Task 4: terraform plan generation
+    stage('Terraform Plan') {
+      when { expression { params.ACTION == 'apply' } }
       steps {
         dir('project-4.3-jenkins/terraform') {
-          sh 'terraform plan -input=false -out=tfplan'
+          sh 'terraform plan -input=false -out=tfp
         }
       }
     }
 
-    stage('Approval') {                       // Elevate: manual approval gate
+    stage('Approval') {
       steps {
-        input message: 'Apply these infrastructure changes?', ok: 'Apply'
+        input message: "Proceed with '${params.ACTION}'?", ok: params.ACTION
       }
     }
 
-    stage('Terraform Apply') {                // Task 4/5: infrastructure deployment
+    stage('Terraform Apply') {
+      when { expression { params.ACTION == 'apply'
       steps {
         dir('project-4.3-jenkins/terraform') {
           sh 'terraform apply -input=false tfplan'
         }
       }
     }
+
+    stage('Terraform Destroy') {
+      when { expression { params.ACTION == 'destroy' } }
+      steps {
+        dir('project-4.3-jenkins/terraform') {
+          sh 'terraform destroy -input=false -auto
+        }
+      }
+    }
   }
 
   post {
-    success { echo 'Infrastructure provisioned successfully.' }
-    failure { echo 'Pipeline failed — check the Terraform logs above.' }
+    success { echo "Terraform '${params.ACTION}' completed successfully." }
+    failure { echo 'Pipeline failed — check the lo
   }
 }
