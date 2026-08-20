@@ -1,0 +1,12 @@
+# ELEVATE (Task): store Terraform state in a REMOTE backend instead of a local
+# terraform.tfstate file. Rename this to backend.tf, create the bucket once, then
+# run `terraform init` to migrate state.
+#
+#   gcloud storage buckets create gs://<YOUR_PROJECT>-tfstate --location=US
+#
+terraform {
+  backend "gcs" {
+    bucket = "capstone-tfstate"
+    prefix = "project-4.1-modules"
+  }
+}

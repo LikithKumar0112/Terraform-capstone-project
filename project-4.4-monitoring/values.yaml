@@ -1,0 +1,24 @@
+# Values for the kube-prometheus-stack Helm chart, trimmed to run comfortably on
+# a small local kind cluster. This one chart installs Prometheus + Grafana +
+# node-exporter + kube-state-metrics together.
+grafana:
+  adminPassword: "admin123"      # login: admin / admin123
+  service:
+    type: ClusterIP              # we reach it via `kubectl port-forward`
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 200m, memory: 256Mi }
+
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+# Keep the footprint small for a local demo.
+alertmanager:
+  enabled: false
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }

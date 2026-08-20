@@ -1,0 +1,18 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+terraform.tfstate.d/
+crash.log
+*.tfvars          # keep secrets/local values out of git (examples are committed)
+!*.tfvars.example
+.terraform.lock.hcl
+override.tf
+override.tf.json
+*_override.tf
+
+# Credentials — never commit
+*sa-key*.json
+*service-account*.json
+key.json
+**/key.json
