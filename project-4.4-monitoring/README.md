@@ -1,57 +1,134 @@
-# Project 4.4 — Monitoring Kubernetes with Prometheus & Grafana
+# Monitoring Kubernetes with Prometheus & Grafana
 
-Deploy Prometheus (metrics collection) + Grafana (dashboards) onto a Kubernetes
-cluster using the `kube-prometheus-stack` Helm chart.
+> Capstone Project 4.4 — deploy a full observability stack (Prometheus + Grafana + node-exporter + kube-state-metrics) onto a Kubernetes cluster using the `kube-prometheus-stack` Helm chart, and visualise cluster health with community dashboards.
 
-## 1. Create a local cluster (Task 1)
-```bash
-kind create cluster --name monitoring --config kind-config.yaml
-kubectl get nodes
+## Overview
+
+This project stands up a local Kubernetes cluster with [kind](https://kind.sigs.k8s.io/) and installs the [`kube-prometheus-stack`](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack) Helm chart. That single chart wires together:
+
+- **Prometheus** — scrapes and stores cluster metrics
+- **Grafana** — dashboards, pre-configured with Prometheus as a data source
+- **node-exporter** — per-node CPU / memory / disk / network metrics
+- **kube-state-metrics** — Kubernetes object state (pods, deployments, nodes)
+- **Prometheus Operator** — manages the Prometheus/Grafana lifecycle
+
+The result: live dashboards showing CPU usage, memory consumption, pod status and node resource utilisation.
+
+## Architecture
+
+```
+┌──────────────────────── kind cluster (monitoring) ────────────────────────┐
+│                                                                            │
+│   node-exporter ───┐                                                       │
+│                    ├──►  Prometheus  ──►  Grafana  ──►  port-forward ──────►│  http://localhost:3001
+│ kube-state-metrics ┘       (scrape)      (dashboards)                      │  (admin / admin123)
+│                                                                            │
+│   control-plane node   +   worker node                                     │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 2. Deploy the monitoring stack (Tasks 2-4)
+## Tech stack
+
+| Tool | Purpose |
+|------|---------|
+| Docker | Container runtime hosting the kind nodes |
+| kind | Local Kubernetes cluster |
+| kubectl | Kubernetes CLI |
+| Helm | Installs the `kube-prometheus-stack` chart |
+| Prometheus | Metrics collection & storage |
+| Grafana | Metrics visualisation / dashboards |
+
+## Repository structure
+
+```
+project-4.4-monitoring/
+├── kind-config.yaml          # 2-node kind cluster (1 control-plane + 1 worker)
+├── values.yaml               # tuned Helm values for a small local cluster
+├── kube-prometheus-stack/    # vendored Helm chart
+├── SETUP.md                  # step-by-step setup on a fresh Linux machine
+├── screenshots/              # deliverable screenshots (see below)
+└── README.md
+```
+
+## Prerequisites
+
+Docker, kind, kubectl and Helm installed and on your `PATH`, with the Docker daemon running. Full install commands for a fresh Linux machine are in [`SETUP.md`](./SETUP.md).
+
+```bash
+docker --version && kind --version && kubectl version --client && helm version
+```
+
+## Quick start
+
+### 1. Create the cluster
+```bash
+kind create cluster --name monitoring --config kind-config.yaml
+kubectl get nodes          # both nodes should be Ready
+```
+
+### 2. Install the monitoring stack
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 
 kubectl create namespace monitoring
-helm install kps prometheus-community/kube-prometheus-stack \
-  -n monitoring -f values.yaml
+helm install kps prometheus-community/kube-prometheus-stack -n monitoring -f values.yaml
 
-kubectl get pods -n monitoring -w        # wait for everything Running
+kubectl get pods -n monitoring -w      # wait until everything is Running / Ready
 ```
-This single chart installs Prometheus, Grafana, node-exporter and
-kube-state-metrics. Prometheus is already scraping the cluster (Task 3), and
-Grafana already has Prometheus set as its data source (Task 5) — that wiring is
-built into the chart.
 
-## 3. Open Grafana (Task 6)
+### 3. Open Grafana
 ```bash
-kubectl port-forward -n monitoring svc/kps-grafana 3000:80
-# browse http://localhost:3000  (login: admin / admin123)
+kubectl port-forward -n monitoring svc/kps-grafana 3001:80
+# browse http://localhost:3001   (login: admin / admin123)
 ```
 
-## 4. View / import dashboards (Tasks 6-7)
-The chart ships Kubernetes dashboards out of the box (look under Dashboards →
-"Kubernetes / Compute Resources ..."). To import a popular community one:
-- Grafana → Dashboards → Import → enter ID **1860** (Node Exporter Full) or
-  **315** (Kubernetes cluster monitoring) → select the Prometheus data source.
+### 4. Import a dashboard
+In Grafana: **Dashboards → New → Import → ID `1860`** (Node Exporter Full) → select the **Prometheus** data source → **Import**.
 
-Dashboards show CPU usage, memory consumption, pod status, and node resource use.
+## Screenshots / Deliverables
 
-## Deliverable screenshots
-1. Prometheus pods running (`kubectl get pods -n monitoring`)
-2. Grafana deployment running
-3. Prometheus configured as the Grafana data source (Grafana → Connections → Data sources)
-4. A Kubernetes monitoring dashboard with live metrics
+**All stack pods running** (`kubectl get pods -n monitoring`) — Prometheus, Grafana, node-exporter and kube-state-metrics all `Running`:
 
-## Elevate
-- Import pre-built dashboards (done above).
-- Add Prometheus alert rules for high CPU / memory.
-- Explore app-level metrics and node/pod performance trends.
+![pods running](screenshots/01-pods-running.png)
+
+**Grafana monitoring dashboard** (Node Exporter Full, ID 1860) — live CPU, memory and pod/node metrics, backed by Prometheus:
+
+![dashboard](screenshots/02-dashboard-1860.png)
+
+## Configuration notes (`values.yaml`)
+
+The chart defaults assume a beefy cluster. `values.yaml` trims and tunes it to run reliably on a small 2-node local cluster:
+
+- **Alertmanager disabled** to keep the footprint small.
+- **Grafana** given `1` CPU / `1Gi` memory and patient health probes — the defaults throttled its (slow) startup and OOM-killed it, causing a `CrashLoopBackOff`.
+- **Prometheus** given `1` CPU / `1Gi` memory so its readiness probe doesn't time out under CPU throttling.
+
+See the [Troubleshooting](#troubleshooting) section for the story behind those values.
+
+## Troubleshooting
+
+Issues actually hit while building this, and their fixes:
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `kubectl get nodes` → *connection refused* | kind containers stopped after a Docker/host restart | `docker start monitoring-control-plane monitoring-worker`, or `kind export kubeconfig --name monitoring` |
+| `No space left on device` installing Helm | small (8 GiB) root volume | Grow the volume, then `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1` |
+| `Cannot connect to the Docker daemon` | Docker not running | `sudo systemctl enable --now docker` |
+| Grafana pod stuck `2/3`, `CrashLoopBackOff` | CPU limit too low → liveness probe killed it mid-boot | Raise CPU limit + relax probes (in `values.yaml`) |
+| Grafana pod `OOMKilled` (exit 137) after ~90 min | 512Mi memory limit too small for Grafana 13.x | Raise memory limit to `1Gi` |
+| Prometheus pod stuck `1/2` | CPU throttling → `/-/ready` probe timeout | Raise Prometheus CPU/memory limits |
 
 ## Clean up
+
 ```bash
 helm uninstall kps -n monitoring
 kind delete cluster --name monitoring
 ```
+
+## Possible extensions
+
+- Add Prometheus alert rules for high CPU / memory and re-enable Alertmanager.
+- Import additional dashboards (e.g. **315** Kubernetes cluster monitoring).
+- Persist Grafana with a PVC so dashboards survive pod restarts.
+- Expose Grafana via an Ingress instead of `port-forward`.

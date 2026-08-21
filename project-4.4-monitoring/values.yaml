@@ -6,15 +6,31 @@ grafana:
   service:
     type: ClusterIP              # we reach it via `kubectl port-forward`
   resources:
-    requests: { cpu: 50m, memory: 128Mi }
-    limits:   { cpu: 200m, memory: 256Mi }
+    # Grafana 13.x is heavy on startup (DB migrations + plugin loading). A tight
+    # CPU limit throttles boot so much that the liveness probe kills it before it
+    # ever listens on :3000 -> permanent CrashLoop. Give it real CPU headroom.
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1000m, memory: 1Gi }   # 512Mi got OOMKilled after ~1.5h
+  # Be patient during the (slow) first boot so kubelet doesn't kill it mid-startup.
+  livenessProbe:
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 30
+    failureThreshold: 30
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 30
+    failureThreshold: 30
 
 prometheus:
   prometheusSpec:
     retention: 6h
+    # 500m CPU throttled Prometheus so hard its /-/ready probe timed out and
+    # kubelet kept killing it. Give it more headroom.
     resources:
-      requests: { cpu: 100m, memory: 256Mi }
-      limits:   { cpu: 500m, memory: 512Mi }
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: 1000m, memory: 1Gi }
 
 # Keep the footprint small for a local demo.
 alertmanager:
