@@ -1,6 +1,6 @@
 # Project 4.1 — the ROOT (main) configuration.
-# It doesn't create resources directly; instead it CALLS reusable modules.
-# This is Tasks 2 & 3: "create a module" and "use the module in main config".
+# resources are not created directly, instead it CALLS reusable modules.
+# Related to Tasks 2 & 3: "create a module" and "use the module in main config".
 
 module "storage" {
   source     = "../modules/gcs-bucket"
