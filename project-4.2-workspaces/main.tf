@@ -1,7 +1,8 @@
 # Project 4.2 — ONE configuration, MANY environments via workspaces.
 # terraform.workspace holds the current workspace name (dev/staging/prod).
-# We use it to (a) name resources per-environment and (b) pick per-env settings,
-# while each workspace keeps its OWN isolated state file automatically.
+# We use it to
+# (a) name resources per-environment 
+# (b) pick per-env settings, while each workspace keeps its own isolated state file automatically.
 
 locals {
   env = terraform.workspace
