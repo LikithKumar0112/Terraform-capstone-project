@@ -1,5 +1,3 @@
-# Outputs let the parent config (and other modules) read useful facts about
-# what was created — demonstrated in Project 4.1.
 output "name" {
   description = "The bucket name."
   value       = google_storage_bucket.this.name
