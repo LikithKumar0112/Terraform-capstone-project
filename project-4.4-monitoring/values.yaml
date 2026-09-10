@@ -4,7 +4,7 @@
 grafana:
   adminPassword: "admin123"      # login: admin / admin123
   service:
-    type: ClusterIP              # we reach it via `kubectl port-forward`
+    type: ClusterIP              # can be reached via `kubectl port-forward`
   resources:
     # Grafana 13.x is heavy on startup (DB migrations + plugin loading). A tight
     # CPU limit throttles boot so much that the liveness probe kills it before it
