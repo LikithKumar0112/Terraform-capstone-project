@@ -1,4 +1,4 @@
-// Project 4.3 — Jenkins pipeline: apply OR destroy infrastructure with Terraform.
+// Jenkins pipeline to apply OR destroy infrastructure with Terraform.
 pipeline {
   agent any
 
