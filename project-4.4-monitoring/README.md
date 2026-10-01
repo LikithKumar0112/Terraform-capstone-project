@@ -14,6 +14,17 @@ This project stands up a local Kubernetes cluster with [kind](https://kind.sigs.
 
 The result: live dashboards showing CPU usage, memory consumption, pod status and node resource utilisation.
 
+## Feature status
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Prometheus + Grafana + node-exporter + kube-state-metrics | **Implemented** | via `kube-prometheus-stack` |
+| Grafana admin creds from a Kubernetes Secret | **Implemented** | `existingSecret: grafana-admin` (no plaintext password in `values.yaml`) |
+| Grafana persistence (dashboards survive restarts) | **Implemented** | 5Gi PVC |
+| Prometheus persistence | **Implemented** | 10Gi `storageSpec` PVC |
+| Prometheus retention 15d | **Implemented** | was 6h |
+| Alertmanager | **Implemented** | `alertmanager.enabled: true` |
+| Dashboards provisioned as code | Optional | currently imported manually (ID 1860) |
+
 ## Architecture
 
 ```
@@ -21,7 +32,7 @@ The result: live dashboards showing CPU usage, memory consumption, pod status an
 │                                                                            │
 │   node-exporter ───┐                                                       │
 │                    ├──►  Prometheus  ──►  Grafana  ──►  port-forward ──────►│  http://localhost:3001
-│ kube-state-metrics ┘       (scrape)      (dashboards)                      │  (admin / admin123)
+│ kube-state-metrics ┘       (scrape)      (dashboards)                      │  (admin / from Secret)
 │                                                                            │
 │   control-plane node   +   worker node                                     │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -72,6 +83,12 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update
 
 kubectl create namespace monitoring
+
+# Grafana admin creds come from a Secret (values.yaml uses existingSecret: grafana-admin)
+kubectl create secret generic grafana-admin -n monitoring \
+  --from-literal=admin-user=admin \
+  --from-literal=admin-password='<STRONG_PASSWORD>'
+
 helm install kps prometheus-community/kube-prometheus-stack -n monitoring -f values.yaml
 
 kubectl get pods -n monitoring -w      # wait until everything is Running / Ready
@@ -80,7 +97,7 @@ kubectl get pods -n monitoring -w      # wait until everything is Running / Read
 ### 3. Open Grafana
 ```bash
 kubectl port-forward -n monitoring svc/kps-grafana 3001:80
-# browse http://localhost:3001   (login: admin / admin123)
+# browse http://localhost:3001   (login: admin / the password you set in the grafana-admin Secret)
 ```
 
 ### 4. Import a dashboard
@@ -98,9 +115,12 @@ In Grafana: **Dashboards → New → Import → ID `1860`** (Node Exporter Full)
 
 ## Configuration notes (`values.yaml`)
 
-The chart defaults assume a beefy cluster. `values.yaml` trims and tunes it to run reliably on a small 2-node local cluster:
+The chart defaults assume a beefy cluster. `values.yaml` trims and tunes it to run reliably on a small 2-node local cluster, while keeping production-oriented hardening:
 
-- **Alertmanager disabled** to keep the footprint small.
+- **Grafana admin from a Secret** (`existingSecret: grafana-admin`) — no plaintext password in `values.yaml`.
+- **Grafana persistence** (5Gi PVC) so dashboards survive pod restarts.
+- **Alertmanager enabled** so alerts can actually fire.
+- **Prometheus** retention raised to **15d** with a **10Gi PVC** so metrics persist across restarts.
 - **Grafana** given `1` CPU / `1Gi` memory and patient health probes — the defaults throttled its (slow) startup and OOM-killed it, causing a `CrashLoopBackOff`.
 - **Prometheus** given `1` CPU / `1Gi` memory so its readiness probe doesn't time out under CPU throttling.
 
@@ -128,7 +148,6 @@ kind delete cluster --name monitoring
 
 ## Possible extensions
 
-- Add Prometheus alert rules for high CPU / memory and re-enable Alertmanager.
-- Import additional dashboards (e.g. **315** Kubernetes cluster monitoring).
-- Persist Grafana with a PVC so dashboards survive pod restarts.
+- Add Prometheus alert rules for high CPU / memory (Alertmanager is already enabled).
+- Import additional dashboards (e.g. **315** Kubernetes cluster monitoring), or provision them as code via `grafana.dashboardProviders`.
 - Expose Grafana via an Ingress instead of `port-forward`.

@@ -3,6 +3,16 @@
 One configuration, three isolated environments (dev / staging / prod), each with
 its **own state file**, using `terraform workspace`.
 
+## Feature status
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Per-workspace env settings | **Implemented** | `local.env_settings` keyed by workspace |
+| Workspace-name validation | **Implemented** | `null_resource.validate_workspace` fails fast on an unknown workspace |
+| Remote GCS state backend | **Implemented** | `backend-gcs.tf`, prefix `terraform/workspaces` (each workspace gets its own sub-path) |
+
+> With the remote backend active, run `terraform init -migrate-state` once to move any
+> local `terraform.tfstate.d/*` state into GCS.
+
 ## Run it
 ```bash
 cp terraform.tfvars.example terraform.tfvars   # edit project_id

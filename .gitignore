@@ -6,7 +6,10 @@ terraform.tfstate.d/
 crash.log
 *.tfvars          # keep secrets/local values out of git (examples are committed)
 !*.tfvars.example
-.terraform.lock.hcl
+
+# Provider lock files ARE committed for reproducible provider versions.
+# (intentionally NOT ignoring .terraform.lock.hcl)
+
 override.tf
 override.tf.json
 *_override.tf
