@@ -1,5 +1,5 @@
 variable "name" {
-  description = "Globally-unique bucket name."
+  description = "Name of the GCS bucket."
   type        = string
 }
 
@@ -31,4 +31,15 @@ variable "labels" {
   description = "Labels applied to the bucket."
   type        = map(string)
   default     = {}
+}
+variable "lifecycle_age_days" {
+  description = "Number of days before objects are deleted"
+  type        = number
+  default     = 0
+}
+
+variable "kms_key_name" {
+  description = "Optional Cloud KMS key used to encrypt the bucket"
+  type        = string
+  default     = ""
 }

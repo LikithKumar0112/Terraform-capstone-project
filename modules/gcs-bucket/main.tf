@@ -5,19 +5,19 @@ resource "google_storage_bucket" "this" {
   name                        = var.name
   location                    = var.location
   uniform_bucket_level_access = true
-  public_access_prevention    = "enforced"          # block public exposure
+  public_access_prevention    = "enforced" # block public exposure
 
   versioning { enabled = var.versioning }
 
-  dynamic "lifecycle_rule" {                          # optional retention/cleanup
+  dynamic "lifecycle_rule" { # optional retention/cleanup
     for_each = var.lifecycle_age_days > 0 ? [1] : []
     content {
       condition { age = var.lifecycle_age_days }
-      action    { type = "Delete" }
+      action { type = "Delete" }
     }
   }
 
-  dynamic "encryption" {                              # optional CMEK
+  dynamic "encryption" { # optional CMEK
     for_each = var.kms_key_name != "" ? [1] : []
     content { default_kms_key_name = var.kms_key_name }
   }
