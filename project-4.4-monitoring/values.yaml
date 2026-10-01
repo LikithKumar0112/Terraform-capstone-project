@@ -2,9 +2,18 @@
 # a small local kind cluster. This one chart installs Prometheus + Grafana +
 # node-exporter + kube-state-metrics together.
 grafana:
-  adminPassword: "admin123"      # login: admin / admin123
+  admin:
+    existingSecret: grafana-admin          # was adminPassword: "admin123"
+    userKey: admin-user
+    passwordKey: admin-password
+    
+  persistence:                             # dashboards survive restarts
+    enabled: true
+    size: 5Gi
+    
   service:
     type: ClusterIP              # can be reached via `kubectl port-forward`
+    
   resources:
     # Grafana 13.x is heavy on startup (DB migrations + plugin loading). A tight
     # CPU limit throttles boot so much that the liveness probe kills it before it
@@ -17,6 +26,7 @@ grafana:
     periodSeconds: 10
     timeoutSeconds: 30
     failureThreshold: 30
+    
   readinessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10
@@ -25,16 +35,24 @@ grafana:
 
 prometheus:
   prometheusSpec:
-    retention: 6h
+    retention: 15d
     # 500m CPU throttled Prometheus so hard its /-/ready probe timed out and
     # kubelet kept killing it. Give it more headroom.
     resources:
       requests: { cpu: 200m, memory: 512Mi }
       limits:   { cpu: 1000m, memory: 1Gi }
+      
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          resources:
+            requests:
+              storage: 10Gi
 
 # Keep the footprint small for a local demo.
 alertmanager:
-  enabled: false
+  enabled: true
+  
 prometheus-node-exporter:
   resources:
     requests: { cpu: 25m, memory: 32Mi }
