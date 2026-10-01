@@ -16,3 +16,7 @@ override.tf.json
 *service-account*.json
 key.json
 **/key.json
+
+*.tfstate
+*.tfstate.*
+.terraform/
