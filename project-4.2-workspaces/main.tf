@@ -6,6 +6,18 @@
 
 locals {
   env = terraform.workspace
+  allowed_envs = ["dev", "staging", "prod"]
+
+# Fails the run immediately if someone selects an unexpected workspace.
+resource "null_resource" "validate_workspace" {
+  lifecycle {
+    precondition {
+      condition     = contains(local.allowed_envs, local.env)
+      error_message = "Workspace '${local.env}' is not allowed. Use one of: ${join(", ", 
+local.allowed_envs)}."
+    }
+  }
+}
 
   env_settings = {
     default = { versioning = false }
@@ -14,7 +26,7 @@ locals {
     prod    = { versioning = true }
   }
 
-  cfg = lookup(local.env_settings, local.env, local.env_settings["dev"])
+  cfg = local.env_settings[local.env] 
 }
 
 module "storage" {
