@@ -28,6 +28,20 @@ pipeline {
       }
     }
 
+    stage('Formate & Validte') {
+      steps {
+        sh 'terraform fmt -check -recrusive'
+        sh 'terraform init -backend=false'
+        sh 'terraform validate'
+      }
+    }
+    
+    stage('Security Scan (tfsec)') {
+    steps {
+        sh 'docker run --rm -v $PWD:/src aquasec/tfsec /src --soft-fail'
+        // drop --soft-fail once findings are triaged, to make it a hard gate
+    }
+    
     stage('Terraform Plan') {
       when { expression { params.ACTION == 'apply' } }
       steps {
