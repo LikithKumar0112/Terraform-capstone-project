@@ -3,7 +3,7 @@
 
 terraform {
   backend "gcs" {
-    bucket = "capstone-tfstate"
-    prefix = "project-4.1-modules"
+    bucket = "likith-tfstate-capstone"   # auto assign sub paths for workspaces
+    prefix = "terraform/state"
   }
 }

@@ -5,19 +5,8 @@
 # (b) pick per-env settings, while each workspace keeps its own isolated state file automatically.
 
 locals {
-  env = terraform.workspace
+  env          = terraform.workspace
   allowed_envs = ["dev", "staging", "prod"]
-
-# Fails the run immediately if someone selects an unexpected workspace.
-resource "null_resource" "validate_workspace" {
-  lifecycle {
-    precondition {
-      condition     = contains(local.allowed_envs, local.env)
-      error_message = "Workspace '${local.env}' is not allowed. Use one of: ${join(", ", 
-local.allowed_envs)}."
-    }
-  }
-}
 
   env_settings = {
     default = { versioning = false }
@@ -26,8 +15,20 @@ local.allowed_envs)}."
     prod    = { versioning = true }
   }
 
-  cfg = local.env_settings[local.env] 
+  cfg = local.env_settings[local.env]
 }
+
+# Fails the run immediately if someone selects an unexpected workspace.
+resource "null_resource" "validate_workspace" {
+  lifecycle {
+    precondition {
+      condition = contains(local.allowed_envs, local.env)
+      error_message = "Workspace '${local.env}' is not allowed. Use one of: ${join(", ",
+      local.allowed_envs)}."
+    }
+  }
+}
+
 
 module "storage" {
   source     = "../modules/gcs-bucket"

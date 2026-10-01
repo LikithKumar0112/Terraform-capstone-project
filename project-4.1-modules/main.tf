@@ -9,7 +9,7 @@ module "storage" {
   versioning = true
   labels = {
     environment = var.environment
-    owner = "likith"
+    owner       = "likith"
     managed_by  = "terraform"
     project     = "4-1-modules"
   }
