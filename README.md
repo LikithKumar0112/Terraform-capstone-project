@@ -131,7 +131,7 @@ tuning story and troubleshooting notes.
 cd project-4.4-monitoring
 kind create cluster --name monitoring --config kind-config.yaml
 helm install kps prometheus-community/kube-prometheus-stack -n monitoring -f values.yaml
-kubectl port-forward -n monitoring svc/kps-grafana 3001:80   # admin / admin123
+kubectl port-forward -n monitoring svc/kps-grafana 3001:80 
 ```
 
 **All stack pods `Running` in the `monitoring` namespace**
