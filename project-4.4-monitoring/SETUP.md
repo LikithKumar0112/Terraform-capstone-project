@@ -72,7 +72,7 @@ kubectl get pods -n monitoring -w  # Ctrl+C once all Running/Ready
 kubectl port-forward -n monitoring svc/kps-grafana 3000:80
 ```
 
-Browse http://localhost:3000 → login **admin / admin123**.
+Browse http://localhost:3000
 
 📸 **Screenshot 2** — Grafana login page + grafana pod Running.
 
